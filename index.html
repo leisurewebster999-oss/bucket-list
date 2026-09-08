@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pacific International Toastmasters - Bucket List Collector</title>
+  <title>Pacific International Toastmasters - Live Bucket List</title>
   <style>
     :root {
       --maroon: #772432;
@@ -33,12 +33,14 @@
     .checkbox { margin-top: 3px; cursor: pointer; }
     .item-content { flex: 1; }
     .author { display: block; font-size: 11px; color: #666; font-style: italic; margin-top: 3px; }
+    .sync-status { text-align: center; font-size: 12px; color: #666; margin-bottom: 10px; }
   </style>
 </head>
 <body>
 
   <h1>Pacific International Toastmasters Club</h1>
   <p class="subtitle">Meeting Theme: "My Bucket List"</p>
+  <div class="sync-status" id="syncStatus">Syncing with Live Sheet...</div>
 
   <div class="form-container">
     <div class="form-group">
@@ -63,71 +65,109 @@
   </div>
 
   <div class="board">
-    <div class="category-card">
-      <h3>Personal</h3>
-      <ul id="list-Personal"></ul>
-    </div>
-    <div class="category-card">
-      <h3>Travel</h3>
-      <ul id="list-Travel"></ul>
-    </div>
-    <div class="category-card">
-      <h3>Adventure</h3>
-      <ul id="list-Adventure"></ul>
-    </div>
-    <div class="category-card">
-      <h3>Financial</h3>
-      <ul id="list-Financial"></ul>
-    </div>
-    <div class="category-card">
-      <h3>Professional</h3>
-      <ul id="list-Professional"></ul>
-    </div>
-    <div class="category-card completed-card">
-      <h3>Completed Goals ✅</h3>
-      <ul id="list-Completed"></ul>
-    </div>
+    <div class="category-card"><h3>Personal</h3><ul id="list-Personal"></ul></div>
+    <div class="category-card"><h3>Travel</h3><ul id="list-Travel"></ul></div>
+    <div class="category-card"><h3>Adventure</h3><ul id="list-Adventure"></ul></div>
+    <div class="category-card"><h3>Financial</h3><ul id="list-Financial"></ul></div>
+    <div class="category-card"><h3>Professional</h3><ul id="list-Professional"></ul></div>
+    <div class="category-card completed-card"><h3>Completed Goals ✅</h3><ul id="list-Completed"></ul></div>
   </div>
 
   <script>
-    function addGoal() {
+    // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE:
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw_0F65pMwJ8UTUgdSOfNqtE6hGmdaV9YIsQiaun8R0L6qwsyXxj_ZepMzsHE4YsCo/execE";
+
+    let bucketData = [];
+
+    // Fetch latest data from Google Sheets
+    async function fetchData() {
+      try {
+        const response = await fetch(SCRIPT_URL);
+        bucketData = await response.json();
+        renderBoard();
+        document.getElementById('syncStatus').innerText = "Live Connected • Auto-refreshes every 5s";
+      } catch (err) {
+        document.getElementById('syncStatus').innerText = "Connecting to Database...";
+      }
+    }
+
+    function renderBoard() {
+      ['Personal', 'Travel', 'Adventure', 'Financial', 'Professional', 'Completed'].forEach(cat => {
+        document.getElementById(`list-${cat}`).innerHTML = '';
+      });
+
+      bucketData.forEach(item => {
+        const targetCat = item.status === 'Completed' ? 'Completed' : item.category;
+        const listElement = document.getElementById(`list-${targetCat}`);
+        if (!listElement) return;
+
+        const li = document.createElement('li');
+        if (item.status === 'Completed') li.classList.add('completed-item');
+
+        li.innerHTML = `
+          <input type="checkbox" class="checkbox" ${item.status === 'Completed' ? 'checked' : ''} onchange="toggleComplete('${item.id}')">
+          <div class="item-content">
+            <span class="item-text"><strong>${item.goal}</strong></span>
+            <span class="author">— ${item.name} (${item.category})</span>
+          </div>
+        `;
+        listElement.appendChild(li);
+      });
+    }
+
+    async function addGoal() {
       const name = document.getElementById('name').value.trim() || 'Anonymous';
       const category = document.getElementById('category').value;
       const goal = document.getElementById('goal').value.trim();
 
-      if (!goal) {
-        alert('Please enter a goal!');
-        return;
-      }
+      if (!goal) return alert('Please enter a goal!');
 
-      const listElement = document.getElementById(`list-${category}`);
-      const li = document.createElement('li');
-      
-      li.innerHTML = `
-        <input type="checkbox" class="checkbox" onchange="toggleComplete(this, '${category}')">
-        <div class="item-content">
-          <span class="item-text"><strong>${goal}</strong></span>
-          <span class="author">— ${name}</span>
-        </div>
-      `;
-      
-      listElement.appendChild(li);
+      const newItem = {
+        action: "ADD",
+        id: Date.now().toString(),
+        name: name,
+        category: category,
+        goal: goal,
+        status: "Pending"
+      };
+
       document.getElementById('goal').value = '';
+      
+      // Optimistic update
+      bucketData.push(newItem);
+      renderBoard();
+
+      // Post to Google Sheet
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newItem)
+      });
+
+      setTimeout(fetchData, 1000);
     }
 
-    function toggleComplete(checkbox, originalCategory) {
-      const li = checkbox.parentElement;
-      const completedList = document.getElementById('list-Completed');
-      const originalList = document.getElementById(`list-${originalCategory}`);
+    async function toggleComplete(id) {
+      const item = bucketData.find(i => i.id == id);
+      if (!item) return;
 
-      if (checkbox.checked) {
-        li.classList.add('completed-item');
-        completedList.appendChild(li);
-      } else {
-        li.classList.remove('completed-item');
-        originalList.appendChild(li);
-      }
+      item.status = item.status === 'Completed' ? 'Pending' : 'Completed';
+      renderBoard();
+
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "TOGGLE", id: id })
+      });
+
+      setTimeout(fetchData, 1000);
     }
+
+    // Initial load & setup polling for multi-user real-time sync
+    fetchData();
+    setInterval(fetchData, 5000); // Polling every 5 seconds
   </script>
 
 </body>
