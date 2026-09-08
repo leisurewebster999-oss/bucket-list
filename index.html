@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pacific International Toastmasters - Bucket List Collector</title>
+  <style>
+    :root {
+      --maroon: #772432;
+      --navy: #004165;
+      --yellow: #F2A900;
+      --gray: #f4f6f7;
+      --green: #28a745;
+    }
+    body { font-family: Arial, sans-serif; background: var(--gray); margin: 0; padding: 20px; color: #333; }
+    h1 { color: var(--maroon); text-align: center; margin-bottom: 5px; }
+    p.subtitle { text-align: center; color: var(--navy); font-weight: bold; margin-top: 0; }
+    .form-container { max-width: 600px; margin: 0 auto 30px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--navy); }
+    input, select, button { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
+    button { background: var(--maroon); color: #fff; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s; }
+    button:hover { background: #5c1c27; }
+    .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+    .category-card { background: #fff; border-radius: 8px; border-top: 5px solid var(--navy); padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .category-card.completed-card { border-top-color: var(--green); }
+    .category-card h3 { margin-top: 0; color: var(--maroon); border-bottom: 2px solid var(--yellow); padding-bottom: 5px; }
+    .category-card.completed-card h3 { color: var(--green); border-bottom-color: var(--green); }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { background: #f9f9f9; padding: 8px 10px; margin-bottom: 8px; border-left: 3px solid var(--yellow); border-radius: 3px; font-size: 13px; word-wrap: break-word; display: flex; align-items: flex-start; gap: 8px; }
+    li.completed-item { border-left-color: var(--green); background: #eef9f1; }
+    li.completed-item .item-text { text-decoration: line-through; color: #777; }
+    .checkbox { margin-top: 3px; cursor: pointer; }
+    .item-content { flex: 1; }
+    .author { display: block; font-size: 11px; color: #666; font-style: italic; margin-top: 3px; }
+  </style>
+</head>
+<body>
+
+  <h1>Pacific International Toastmasters Club</h1>
+  <p class="subtitle">Meeting Theme: "My Bucket List"</p>
+
+  <div class="form-container">
+    <div class="form-group">
+      <label for="name">Your Name / Role:</label>
+      <input type="text" id="name" placeholder="e.g. John Doe (Guest / Speaker)">
+    </div>
+    <div class="form-group">
+      <label for="category">Category:</label>
+      <select id="category">
+        <option value="Personal">Personal</option>
+        <option value="Travel">Travel</option>
+        <option value="Adventure">Adventure</option>
+        <option value="Financial">Financial</option>
+        <option value="Professional">Professional</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="goal">Your Bucket List Goal:</label>
+      <input type="text" id="goal" placeholder="e.g. See the Northern Lights">
+    </div>
+    <button onclick="addGoal()">Add to Bucket List</button>
+  </div>
+
+  <div class="board">
+    <div class="category-card">
+      <h3>Personal</h3>
+      <ul id="list-Personal"></ul>
+    </div>
+    <div class="category-card">
+      <h3>Travel</h3>
+      <ul id="list-Travel"></ul>
+    </div>
+    <div class="category-card">
+      <h3>Adventure</h3>
+      <ul id="list-Adventure"></ul>
+    </div>
+    <div class="category-card">
+      <h3>Financial</h3>
+      <ul id="list-Financial"></ul>
+    </div>
+    <div class="category-card">
+      <h3>Professional</h3>
+      <ul id="list-Professional"></ul>
+    </div>
+    <div class="category-card completed-card">
+      <h3>Completed Goals ✅</h3>
+      <ul id="list-Completed"></ul>
+    </div>
+  </div>
+
+  <script>
+    function addGoal() {
+      const name = document.getElementById('name').value.trim() || 'Anonymous';
+      const category = document.getElementById('category').value;
+      const goal = document.getElementById('goal').value.trim();
+
+      if (!goal) {
+        alert('Please enter a goal!');
+        return;
+      }
+
+      const listElement = document.getElementById(`list-${category}`);
+      const li = document.createElement('li');
+      
+      li.innerHTML = `
+        <input type="checkbox" class="checkbox" onchange="toggleComplete(this, '${category}')">
+        <div class="item-content">
+          <span class="item-text"><strong>${goal}</strong></span>
+          <span class="author">— ${name}</span>
+        </div>
+      `;
+      
+      listElement.appendChild(li);
+      document.getElementById('goal').value = '';
+    }
+
+    function toggleComplete(checkbox, originalCategory) {
+      const li = checkbox.parentElement;
+      const completedList = document.getElementById('list-Completed');
+      const originalList = document.getElementById(`list-${originalCategory}`);
+
+      if (checkbox.checked) {
+        li.classList.add('completed-item');
+        completedList.appendChild(li);
+      } else {
+        li.classList.remove('completed-item');
+        originalList.appendChild(li);
+      }
+    }
+  </script>
+
+</body>
+</html>
